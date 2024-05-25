@@ -1,2 +1,1 @@
-# nova
-Neuro Omics Visual Analytics
+# NOVA: Neuro Omics Visual Analystics
