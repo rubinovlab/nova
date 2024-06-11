@@ -1,0 +1,21 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Gene {
+  id            Int    @id @default(autoincrement())
+  geneId        String
+  chromosome    String
+  startPosition Int
+  endPosition   Int
+  pValue        Float
+  beta          Float
+  geneSymbol    String
+  grex          String
+  phenotype     String
+}
