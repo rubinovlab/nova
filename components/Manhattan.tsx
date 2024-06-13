@@ -1,34 +1,29 @@
 import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import axios from "axios";
+import { Filter } from "@/utils/types";
+import { Gene } from "@prisma/client";
 
-interface Gene {
-  id: number;
-  chromosome: string;
-  startPosition: number;
-  endPosition: number;
-  geneId: string;
-  pValue: number;
-  phenotype: string;
-  grex: string;
-  beta: number;
-  geneSymbol: string;
+interface Props {
+  genes: Gene[];
+  filteredGenes: Gene[];
+  filter: Filter;
+  setPhenotypes: React.Dispatch<React.SetStateAction<string[]>>;
+  setGrexes: React.Dispatch<React.SetStateAction<string[]>>;
+  highlighedGene: Gene | undefined;
 }
 
-const ManhattanPlot: React.FC = () => {
+const ManhattanPlot: React.FC<Props> = ({
+  genes,
+  filteredGenes,
+  filter,
+  setPhenotypes,
+  setGrexes,
+  highlighedGene,
+}) => {
   const d3Container = useRef<HTMLDivElement | null>(null);
 
-  const [genes, setGenes] = useState<Gene[]>([]);
-
-  const fetchData = async () => {
-    try {
-      const response = await axios.get("/api/fetch");
-      setGenes(response.data.data.filter((gene: Gene) => gene.chromosome));
-    } catch (error) {
-      console.error("Error fetching data: ", error);
-    }
-  };
-
+  // get the max end position of each chromosome's genes for cx calculation
   function getMaxEndPositions(
     genes: Gene[]
   ): { chromosome: string; maxEndPosition: number }[] {
@@ -51,6 +46,7 @@ const ManhattanPlot: React.FC = () => {
     );
   }
 
+  // calculate tick position based on number of chromosomes
   function calculateTickPosition(arr: number[]): number[] {
     const averages: number[] = [];
     for (let i = 1; i < arr.length; i++) {
@@ -61,27 +57,37 @@ const ManhattanPlot: React.FC = () => {
   }
 
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  useEffect(() => {
     if (genes.length > 0 && d3Container.current) {
       const container = d3.select(d3Container.current);
 
       container.selectAll("svg").remove();
 
       const margin = { top: 20, right: 30, bottom: 40, left: 40 };
-      const width = 1460 - margin.left - margin.right;
-      const height = 500 - margin.top - margin.bottom;
-
-      // calculate positions
+      const width = 1160 - margin.left - margin.right;
+      const height = 320 - margin.top - margin.bottom;
 
       const maxEndPositionByChromosome = getMaxEndPositions(genes);
 
+      // calculate number of genes for each chromosome
       const genesByChromosome = d3
         .groups(genes, (d) => d.chromosome)
         .sort((a, b) => +a[0] - +b[0]);
       const chromosomes = genesByChromosome.map((d) => d[0]);
+
+      setPhenotypes(
+        d3
+          .groups(genes, (d) => d.phenotype)
+          .sort()
+          .map((d) => d[0])
+      );
+
+      setGrexes(
+        d3
+          .groups(genes, (d) => d.grex)
+          .sort()
+          .map((d) => d[0])
+      );
+
       const genesCountByChromosome = genesByChromosome.map((d) => d[1].length);
 
       const cumulativeGeneCount: number[] = [0];
@@ -90,17 +96,7 @@ const ManhattanPlot: React.FC = () => {
         return acc + count;
       }, 0);
 
-      //
-      //
-      //
-
-      //
-
-      // Group genes by chromosome and sort chromosomes numerically
-
-      // Calculate the cumulative gene count for proportional spacing
-
-      // Create a mapping of chromosome to cumulative position
+      // mapping of chromosome to cumulative position
       const chromosomePosition = new Map<string, number>();
       let cumulativeCount = cumulativeGeneCount[0];
       for (const [chromosome, geneArray] of genesByChromosome) {
@@ -108,19 +104,23 @@ const ManhattanPlot: React.FC = () => {
         cumulativeCount += geneArray.length;
       }
 
-      console.log(chromosomePosition);
-
       const totalGenes = cumulativeGeneCount[cumulativeGeneCount.length - 1];
 
-      // Linear scale for x-axis to spread genes proportionally
+      // x axis scale by gene count
       const x = d3.scaleLinear().domain([0, totalGenes]).range([0, width]);
 
-      // Transform p-values
+      // transformed p-values
+
       const transformedPValues = genes.map((gene) => -Math.log10(gene.pValue));
-      const y = d3
-        .scaleLinear()
-        .domain([0, d3.max(transformedPValues) || 1])
-        .range([height, 0]);
+      const maxPValue = d3.max(transformedPValues) || 1;
+      const y = d3.scaleLinear().domain([0, maxPValue]).range([height, 0]);
+
+      // Generate tick values in increments of 8 up to the maximum p-value
+
+      let tickValues = d3.range(0, maxPValue, 8);
+      if (maxPValue % 8 !== 0) {
+        tickValues.push(maxPValue);
+      }
 
       const svg = d3
         .select(d3Container.current)
@@ -130,19 +130,32 @@ const ManhattanPlot: React.FC = () => {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
-      // X-axis with chromosome labels
-      const xAxis = d3
+      // x-axis ticks with chromosome labels
+      const xTicks = d3
         .axisBottom(x)
         .tickValues(calculateTickPosition(cumulativeGeneCount))
         .tickFormat((d, i) => chromosomes[i]);
 
-      svg.append("g").attr("transform", `translate(0,${height})`).call(xAxis);
+      // style x-axis
+      const xAxis = svg
+        .append("g")
+        .attr("transform", `translate(0,${height})`)
+        .call(xTicks);
+      xAxis.selectAll("text").style("font-size", "14px");
+      xAxis.selectAll("line").style("stroke-width", "2px");
+      xAxis.selectAll("path").style("stroke-width", "2px");
 
-      svg.append("g").call(d3.axisLeft(y));
+      // style y-axis
+      const yAxis = svg.append("g").call(d3.axisLeft(y).tickValues(tickValues));
+      yAxis.selectAll("line").style("stroke-width", "2px");
+      yAxis.selectAll("path").style("stroke-width", "2px");
+      yAxis.selectAll("text").style("font-size", "14px");
 
       const circles = svg
         .selectAll(".dot")
-        .data(genes)
+        .data(
+          filter.phenotype === "" && filter.grex === "" ? genes : filteredGenes
+        )
         .enter()
         .append("circle")
         .attr("class", "dot")
@@ -157,23 +170,39 @@ const ManhattanPlot: React.FC = () => {
           );
         })
         .attr("cy", (d) => y(-Math.log10(d.pValue)))
-        .attr("r", 2)
+        .attr("r", (d) => (d == highlighedGene ? 5 : 2))
         .style("fill", (d) =>
-          Number(d.chromosome) % 2 === 1 ? "purple" : "pink"
+          d == highlighedGene
+            ? "#a78bfa"
+            : d.pValue < filter.line
+            ? "#c4b5fd"
+            : Number(d.chromosome) % 2 === 1
+            ? "#d1d5db"
+            : "#9ca3af"
         )
         .style("cursor", "pointer")
         .attr("chromosome", (d) => d.chromosome);
 
-      circles
-        .on("mouseover", function (_, i) {
-          d3.select(this).transition().duration(100).style("opacity", 0.5);
-          console.log(this);
-        })
-        .on("mouseout", function (_, i) {
-          d3.select(this).transition().duration(100).style("opacity", 1);
-        });
+      // draw cut off line
+      svg
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", y(-Math.log10(filter.line)))
+        .attr("y2", y(-Math.log10(filter.line)))
+        .attr("stroke", "black")
+        .attr("stroke-width", 1);
+
+      // circles
+      //   .on("mouseover", function (_, i) {
+      //     d3.select(this).transition().duration(100).style("opacity", 0.5);
+      //     console.log(this);
+      //   })
+      //   .on("mouseout", function (_, i) {
+      //     d3.select(this).transition().duration(100).style("opacity", 1);
+      //   });
     }
-  }, [d3Container.current, genes]);
+  }, [d3Container.current, genes, filteredGenes, filter.line, highlighedGene]);
 
   return <div ref={d3Container}></div>;
 };
