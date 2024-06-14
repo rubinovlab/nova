@@ -16,6 +16,13 @@ const Genes: React.FC<Props> = ({
 }) => {
   return (
     <div className="inline-block">
+      <p>
+        {filter.grex !== "" || filter.phenotype !== ""
+          ? filteredGenes.filter((gene) => gene.pValue < filter.line).length
+          : genes.filter((gene) => gene.pValue < filter.line).length}{" "}
+        significant genes.
+      </p>
+
       <div className="overflow-scroll h-80 flex flex-col gap-1 py-2 pl-2 pr-6">
         {(filter.phenotype === "" && filter.grex === "" ? genes : filteredGenes)
           .filter((gene) => gene.pValue < filter.line)

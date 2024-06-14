@@ -1,4 +1,3 @@
-import { Filter } from "@/utils/types";
 import { Gene } from "@prisma/client";
 
 interface Props {
@@ -16,6 +15,7 @@ const GeneHighlight: React.FC<Props> = ({ highlighedGene }) => {
           <p>Expression Region: {highlighedGene.grex}</p>
           <p>Start Position: {highlighedGene.startPosition}</p>
           <p>End Position: {highlighedGene.endPosition}</p>
+          <p>p-value: {highlighedGene.pValue}</p>
         </div>
       ) : (
         <p>No gene selected</p>

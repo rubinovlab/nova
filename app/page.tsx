@@ -34,9 +34,6 @@ export default function Home() {
   useEffect(() => {
     fetchData();
   }, []);
-  useEffect(() => {
-    console.log(filteredGenes);
-  }, [filteredGenes]);
 
   return (
     <main className="p-10">
@@ -45,7 +42,6 @@ export default function Home() {
           filter={filter}
           setFilter={setFilter}
           genes={genes}
-          filteredGenes={filteredGenes}
           setFilteredGenes={setFilteredGenes}
           phenotypes={phenotypes}
           grexes={grexes}
@@ -54,6 +50,7 @@ export default function Home() {
           genes={genes}
           filteredGenes={filteredGenes}
           filter={filter}
+          setFilter={setFilter}
           setPhenotypes={setPhenotypes}
           setGrexes={setGrexes}
           highlighedGene={highlightedGene}

@@ -1,6 +1,3 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as d3 from "d3";
-import axios from "axios";
 import { Filter } from "@/utils/types";
 import { Gene } from "@prisma/client";
 
@@ -8,7 +5,6 @@ interface Props {
   filter: Filter;
   setFilter: React.Dispatch<React.SetStateAction<Filter>>;
   genes: Gene[];
-  filteredGenes: Gene[];
   setFilteredGenes: React.Dispatch<React.SetStateAction<Gene[]>>;
   phenotypes: string[];
   grexes: string[];
@@ -18,7 +14,6 @@ const Inputs: React.FC<Props> = ({
   filter,
   setFilter,
   genes,
-  filteredGenes,
   setFilteredGenes,
   phenotypes,
   grexes,
