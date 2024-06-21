@@ -11,6 +11,10 @@ interface Props {
   setPhenotypes: React.Dispatch<React.SetStateAction<string[]>>;
   setGrexes: React.Dispatch<React.SetStateAction<string[]>>;
   highlighedGene: Gene | undefined;
+  lineY: number;
+  setLineY: React.Dispatch<React.SetStateAction<number>>;
+  prevLineY: number;
+  setPrevLineY: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const ManhattanPlot: React.FC<Props> = ({
@@ -21,11 +25,17 @@ const ManhattanPlot: React.FC<Props> = ({
   setPhenotypes,
   setGrexes,
   highlighedGene,
+  lineY,
+  setLineY,
+  prevLineY,
+  setPrevLineY,
 }) => {
   const d3Container = useRef<HTMLDivElement | null>(null);
-  const [lineY, setLineY] = useState<number | null>(null);
+
   const [svg, setSvg] =
     useState<d3.Selection<SVGGElement, unknown, null, undefined>>();
+  const [prevFilter, setPrevFilter] = useState<number>(filter.line);
+  const [curFilter, setCurFilter] = useState<number>(filter.line);
 
   /* ===
   DEFINE AXES AND PROCESS DATA
@@ -33,7 +43,7 @@ const ManhattanPlot: React.FC<Props> = ({
 
   // define sizing of graph
 
-  const margin = { top: 20, right: 30, bottom: 40, left: 40 };
+  const margin = { top: 20, right: 5, bottom: 40, left: 40 };
   const width = 1160 - margin.left - margin.right;
   const height = 320 - margin.top - margin.bottom;
 
@@ -106,7 +116,7 @@ const ManhattanPlot: React.FC<Props> = ({
   }
 
   /* ===
-  DRAW AXES
+  CREATE GRAPH
   === */
 
   useEffect(() => {
@@ -128,6 +138,9 @@ const ManhattanPlot: React.FC<Props> = ({
           .map((d) => d[0])
       );
 
+      setLineY(y(-Math.log10(filter.line)));
+      setPrevLineY(y(-Math.log10(filter.line)));
+
       // draw graph
       const svg = d3
         .select(d3Container.current)
@@ -137,8 +150,147 @@ const ManhattanPlot: React.FC<Props> = ({
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
       setSvg(svg);
+    }
+  }, [d3Container.current]);
 
-      // x-axis ticks with chromosome labels
+  /* ===
+  PLOT DATA POINTS AND DRAW AXES
+  === */
+
+  useEffect(() => {
+    if (genes.length > 0 && d3Container.current && svg) {
+      const container = d3.select(d3Container.current);
+
+      container.selectAll("line").remove();
+      container.selectAll("text").remove();
+      container.selectAll("path").remove();
+
+      // draw data points
+
+      const dataLength =
+        filter.phenotype.length === 0 && filter.grex.length === 0
+          ? genes.length
+          : filteredGenes.length;
+
+      let pValues = genes.map((d) => d.pValue).sort((a, b) => a - b);
+      let fdrCutoff = 0;
+      for (let i = 0; i < pValues.length; i++) {
+        if (pValues[i] <= ((i + 1) / dataLength) * filter.line) {
+          fdrCutoff = pValues[i];
+        } else {
+          break;
+        }
+      }
+
+      container
+        .selectAll(".dot")
+        // .filter(
+        //   (d: any) =>
+        //     (d.pValue < prevFilter && d.pValue > curFilter) ||
+        //     (d.pValue > prevFilter && d.pValue < curFilter)
+        // )
+        .remove();
+
+      svg
+        .selectAll(".dot")
+        .data(
+          filter.phenotype.length === 0 && filter.grex.length === 0
+            ? genes
+            : filteredGenes
+        )
+        .enter()
+        .append("circle")
+        .attr("z-index", "-1")
+        .attr("class", "dot")
+        .attr("cx", (d) => {
+          const chromosomeIndex = Number(d.chromosome) - 1;
+          return x(
+            ((d.startPosition + d.endPosition) /
+              2 /
+              maxEndPositionByChromosome[chromosomeIndex].maxEndPosition) *
+              genesCountByChromosome[chromosomeIndex] +
+              cumulativeGeneCount[chromosomeIndex]
+          );
+        })
+        .attr("cy", (d) => y(-Math.log10(d.pValue)))
+        .attr("r", (d) => (d == highlighedGene ? 5 : 2))
+        .style("fill", (d) =>
+          d == highlighedGene
+            ? "#C17985"
+            : filter.correction === "bonferroni"
+            ? d.pValue < filter.line / dataLength
+              ? "#E0B6BD"
+              : Number(d.chromosome) % 2 === 1
+              ? "#d1d5db"
+              : "#9ca3af"
+            : filter.correction === "FDR"
+            ? d.pValue < fdrCutoff
+              ? "#E0B6BD"
+              : Number(d.chromosome) % 2 === 1
+              ? "#d1d5db"
+              : "#9ca3af"
+            : d.pValue < filter.line
+            ? "#E0B6BD"
+            : Number(d.chromosome) % 2 === 1
+            ? "#d1d5db"
+            : "#9ca3af"
+        );
+
+      // draw cut off line
+
+      const cufOffHeight =
+        filter.correction === "bonferroni"
+          ? y(-Math.log10(filter.line / dataLength))
+          : filter.correction === "FDR"
+          ? y(-Math.log10(fdrCutoff))
+          : y(-Math.log10(filter.line));
+
+      svg
+        .append("line")
+        .attr("x1", 0)
+        .attr("x2", width)
+        .attr("y1", cufOffHeight)
+        .attr("y2", cufOffHeight)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .style("height", "5px");
+      // .style("cursor", filter.correction === "FDR" ? "default" : "ns-resize");
+      // .call(
+      //   d3.drag<SVGLineElement, unknown>().on("drag", (event: any) => {
+      //     const newY = event.y;
+
+      //     if (filter.correction === "bonferroni") {
+      //       if (Math.pow(10, -y.invert(newY)) <= 1) {
+      //         setLineY(newY);
+      //         const newPValue = dataLength * Math.pow(10, -y.invert(newY));
+      //         setPrevFilter(curFilter);
+      //         setCurFilter(newPValue);
+      //         setFilter((prevFilter) => ({ ...prevFilter, line: newPValue }));
+      //       } else {
+      //         setLineY(height);
+      //         const newPValue = dataLength * 1;
+      //         setFilter((prevFilter) => ({ ...prevFilter, line: newPValue }));
+      //       }
+      //     }
+      //     if (filter.correction === "") {
+      //       if (Math.pow(10, -y.invert(newY)) <= 1) {
+      //         setLineY(newY);
+      //         const newPValue = Math.pow(10, -y.invert(newY));
+      //         setPrevFilter(curFilter);
+      //         setCurFilter(newPValue);
+      //         setFilter((prevFilter) => ({ ...prevFilter, line: newPValue }));
+      //       } else {
+      //         setLineY(height);
+      //         const newPValue = 1;
+      //         setFilter((prevFilter) => ({ ...prevFilter, line: newPValue }));
+      //       }
+      //     }
+      //     console.log(prevFilter, curFilter);
+      //   })
+      // );
+
+      // redraw axes
+      // generate tick values based on chromosomes
       const xTicks = d3
         .axisBottom(x)
         .tickValues(calculateTickPosition(cumulativeGeneCount))
@@ -164,69 +316,6 @@ const ManhattanPlot: React.FC<Props> = ({
       yAxis.selectAll("line").style("stroke-width", "2px");
       yAxis.selectAll("path").style("stroke-width", "2px");
       yAxis.selectAll("text").style("font-size", "14px");
-    }
-  }, [d3Container.current]);
-
-  useEffect(() => {
-    if (genes.length > 0 && d3Container.current && svg) {
-      const container = d3.select(d3Container.current);
-      container.selectAll(".dot").remove();
-      container.selectAll("line").remove();
-
-      // draw data points
-      svg
-        .selectAll(".dot")
-        .data(
-          filter.phenotype === "" && filter.grex === "" ? genes : filteredGenes
-        )
-        .enter()
-        .append("circle")
-        .attr("class", "dot")
-        .attr("cx", (d) => {
-          const chromosomeIndex = Number(d.chromosome) - 1;
-          return x(
-            ((d.startPosition + d.endPosition) /
-              2 /
-              maxEndPositionByChromosome[chromosomeIndex].maxEndPosition) *
-              genesCountByChromosome[chromosomeIndex] +
-              cumulativeGeneCount[chromosomeIndex]
-          );
-        })
-        .attr("cy", (d) => y(-Math.log10(d.pValue)))
-        .attr("r", (d) => (d == highlighedGene ? 5 : 2))
-        .style("fill", (d) =>
-          d == highlighedGene
-            ? "#a78bfa"
-            : d.pValue < filter.line
-            ? "#c4b5fd"
-            : Number(d.chromosome) % 2 === 1
-            ? "#d1d5db"
-            : "#9ca3af"
-        )
-        .attr("pValue", (d) => d.pValue);
-
-      // draw cut off line
-      svg
-        .append("line")
-        .attr("x1", 0)
-        .attr("x2", width)
-        .attr("y1", y(-Math.log10(filter.line)))
-        .attr("y2", y(-Math.log10(filter.line)))
-        .attr("stroke", "black")
-        .attr("stroke-width", 1)
-        .style("height", "5px")
-
-        .style("cursor", "ns-resize")
-        .call(
-          d3.drag<SVGLineElement, unknown>().on("drag", (event: any) => {
-            const newY = event.y;
-            if (Math.pow(10, -y.invert(newY)) <= 1) {
-              setLineY(newY);
-              const newPValue = Math.pow(10, -y.invert(newY));
-              setFilter((prevFilter) => ({ ...prevFilter, line: newPValue }));
-            }
-          })
-        );
     }
   }, [d3Container.current, genes, filter, highlighedGene, lineY]);
 

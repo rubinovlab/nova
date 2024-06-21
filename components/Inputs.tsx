@@ -1,5 +1,6 @@
 import { Filter } from "@/utils/types";
 import { Gene } from "@prisma/client";
+import { FormEventHandler } from "react";
 
 interface Props {
   filter: Filter;
@@ -27,45 +28,84 @@ const Inputs: React.FC<Props> = ({
       ...filter,
       [name]: parsedValue,
     });
+  };
+
+  const handleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const { name, options } = event.target;
+    const selectedValues = Array.from(options)
+      .filter((option) => option.selected)
+      .map((option) => option.value);
+
+    const updatedFilter = {
+      ...filter,
+      [name]: selectedValues,
+    };
+
+    setFilter(updatedFilter);
 
     if (name === "phenotype") {
-      if (value === "")
-        setFilteredGenes(genes.filter((gene) => gene.grex === filter.grex));
-      else if (filter.grex !== "")
+      if (selectedValues.length === 0)
+        setFilteredGenes(
+          genes.filter((gene) =>
+            selectedValues.some((grex) => grex === gene.grex)
+          )
+        );
+      else if (filter.grex.length !== 0)
         setFilteredGenes(
           genes
-            .filter((gene) => gene.grex === filter.grex)
-            .filter((gene) => gene.phenotype === value)
+            .filter((gene) => filter.grex.some((grex) => gene.grex === grex))
+            .filter((gene) =>
+              selectedValues.some((phenotype) => gene.phenotype === phenotype)
+            )
         );
-      else setFilteredGenes(genes.filter((gene) => gene.phenotype === value));
+      else
+        setFilteredGenes(
+          genes.filter((gene) =>
+            selectedValues.some((phenotype) => gene.phenotype === phenotype)
+          )
+        );
     }
+
     if (name === "grex") {
-      if (value === "")
+      if (selectedValues.length === 0)
         setFilteredGenes(
-          genes.filter((gene) => gene.phenotype === filter.phenotype)
+          genes.filter((gene) =>
+            selectedValues.some((phenotype) => phenotype === gene.phenotype)
+          )
         );
-      else if (filter.phenotype !== "")
+      else if (filter.phenotype.length !== 0)
         setFilteredGenes(
           genes
-            .filter((gene) => gene.phenotype === filter.phenotype)
-            .filter((gene) => gene.grex === value)
+            .filter((gene) =>
+              filter.phenotype.some((phenotype) => gene.phenotype === phenotype)
+            )
+            .filter((gene) => selectedValues.some((grex) => gene.grex === grex))
         );
-      else setFilteredGenes(genes.filter((gene) => gene.grex === value));
+      else
+        setFilteredGenes(
+          genes.filter((gene) =>
+            selectedValues.some((grex) => gene.grex === grex)
+          )
+        );
     }
+  };
+
+  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
   };
 
   return (
     <div className="border rounded-lg p-6">
-      <form className="flex flex-col gap-2">
+      <form className="flex flex-col gap-2" onSubmit={onSubmit}>
         <label>
           Phenotype
           <select
             name="phenotype"
             className="border px-4 py-2 rounded-lg w-40"
-            onChange={handleInputChange}
+            onChange={handleFilterChange}
             value={filter.phenotype}
+            multiple
           >
-            <option value=""></option>
             {phenotypes.map((option, index) => (
               <option key={index} value={option}>
                 {option}
@@ -79,10 +119,10 @@ const Inputs: React.FC<Props> = ({
           <select
             name="grex"
             className="border px-4 py-2 rounded-lg w-40"
-            onChange={handleInputChange}
+            onChange={handleFilterChange}
             value={filter.grex}
+            multiple
           >
-            <option value=""></option>
             {grexes.map((option, index) => (
               <option key={index} value={option}>
                 {option}
@@ -101,6 +141,20 @@ const Inputs: React.FC<Props> = ({
             onChange={handleInputChange}
             value={filter.line}
           />
+        </label>
+
+        <label>
+          Correction Method
+          <select
+            name="correction"
+            className="border px-4 py-2 rounded-lg w-40"
+            onChange={handleInputChange}
+            value={filter.correction}
+          >
+            <option value=""></option>
+            <option value="bonferroni">Bonferroni</option>
+            <option value="FDR">FDR</option>
+          </select>
         </label>
       </form>
     </div>

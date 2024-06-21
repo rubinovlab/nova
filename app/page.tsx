@@ -1,70 +1,28 @@
 "use client";
 
-import ManhattanPlot from "../components/Manhattan";
-import { useEffect, useState } from "react";
-import { Filter } from "@/utils/types";
-import axios from "axios";
-import Inputs from "@/components/Inputs";
-import Genes from "@/components/Genes";
-import { Gene } from "@prisma/client";
-import GeneHighlight from "@/components/GeneHighlight";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [genes, setGenes] = useState<Gene[]>([]);
-  const [filter, setFilter] = useState<Filter>({
-    line: 0.0001,
-    phenotype: "",
-    grex: "",
-  });
-  const [filteredGenes, setFilteredGenes] = useState<Gene[]>([]);
-  const [phenotypes, setPhenotypes] = useState<string[]>([]);
-  const [grexes, setGrexes] = useState<string[]>([]);
-  const [highlightedGene, setHighlightedGene] = useState<Gene>();
-
-  // fetch existing data from database
-  const fetchData = async () => {
-    try {
-      const response = await axios.get("/api/fetch");
-      setGenes(response.data.data.filter((gene: Gene) => gene.chromosome));
-    } catch (error) {
-      console.error("Error fetching data: ", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const router = useRouter();
 
   return (
-    <main className="p-10">
-      <div className="flex justify-between mb-10">
-        <Inputs
-          filter={filter}
-          setFilter={setFilter}
-          genes={genes}
-          setFilteredGenes={setFilteredGenes}
-          phenotypes={phenotypes}
-          grexes={grexes}
-        />
-        <ManhattanPlot
-          genes={genes}
-          filteredGenes={filteredGenes}
-          filter={filter}
-          setFilter={setFilter}
-          setPhenotypes={setPhenotypes}
-          setGrexes={setGrexes}
-          highlighedGene={highlightedGene}
-        />
-      </div>
-      <div className="flex gap-4">
-        <Genes
-          genes={genes}
-          filteredGenes={filteredGenes}
-          filter={filter}
-          setHighlightedGene={setHighlightedGene}
-        />
-        <GeneHighlight highlighedGene={highlightedGene} />
-      </div>
-    </main>
+    <div className="p-20">
+      <p className="text-6xl text-center font-bold mb-4">NOVA</p>
+      <p className="text-center text-3xl mb-10">
+        Visualize your GWAS & TWAS data!
+      </p>
+      <p className="text-xl font-light mx-20">
+        Neuro Omics Visual Analytics (NOVA) is a tool that visualizes GWAS and
+        TWAS data with various graphs and filters. Learn how to upload your
+        data, control filters, and gain insights{" "}
+        <span
+          className="underline hover:text-gray-500 transition cursor-pointer"
+          onClick={() => router.push("/how-to")}
+        >
+          here
+        </span>
+        .
+      </p>
+    </div>
   );
 }

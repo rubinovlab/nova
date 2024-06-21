@@ -17,6 +17,8 @@ interface GenePValue {
   grex: string;
   beta: number;
   geneSymbol: string;
+  bonferroni: number;
+  FDR: number;
 }
 
 interface CombinedGeneData {
@@ -29,6 +31,8 @@ interface CombinedGeneData {
   grex: string;
   beta: number;
   geneSymbol: string;
+  bonferroni: number;
+  FDR: number;
 }
 
 async function parseBedFile(filePath: string): Promise<GenePosition[]> {
@@ -65,6 +69,8 @@ async function parseCsvFile(filePath: string): Promise<GenePValue[]> {
           grex: data.grex,
           beta: parseFloat(data.beta),
           geneSymbol: data.sym,
+          bonferroni: parseFloat(data.BON),
+          FDR: parseFloat(data.FDR),
         });
       })
       .on("end", () => resolve(results))

@@ -18,4 +18,6 @@ model Gene {
   geneSymbol    String
   grex          String
   phenotype     String
+  pBonferroni   Float
+  pFDR          Float
 }

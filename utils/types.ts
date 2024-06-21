@@ -1,5 +1,6 @@
 export interface Filter {
   line: number;
-  phenotype: string;
-  grex: string;
+  phenotype: string[];
+  grex: string[];
+  correction: string;
 }
