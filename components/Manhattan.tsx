@@ -15,6 +15,10 @@ interface Props {
   setLineY: React.Dispatch<React.SetStateAction<number>>;
   prevLineY: number;
   setPrevLineY: React.Dispatch<React.SetStateAction<number>>;
+  heightParam: number;
+  widthParam: number;
+  radius: number;
+  upsideDown: boolean;
 }
 
 const ManhattanPlot: React.FC<Props> = ({
@@ -29,6 +33,10 @@ const ManhattanPlot: React.FC<Props> = ({
   setLineY,
   prevLineY,
   setPrevLineY,
+  heightParam,
+  widthParam,
+  radius,
+  upsideDown,
 }) => {
   const d3Container = useRef<HTMLDivElement | null>(null);
 
@@ -43,9 +51,9 @@ const ManhattanPlot: React.FC<Props> = ({
 
   // define sizing of graph
 
-  const margin = { top: 20, right: 5, bottom: 40, left: 40 };
-  const width = 1160 - margin.left - margin.right;
-  const height = 320 - margin.top - margin.bottom;
+  const margin = { top: 20, right: 5, bottom: 40, left: 60 };
+  const width = heightParam - margin.left - margin.right;
+  const height = widthParam - margin.top - margin.bottom;
 
   const maxEndPositionByChromosome = getMaxEndPositions(genes);
 
@@ -76,7 +84,17 @@ const ManhattanPlot: React.FC<Props> = ({
 
   // define scales
   const x = d3.scaleLinear().domain([0, totalGenes]).range([0, width]);
-  const y = d3.scaleLinear().domain([0, maxPValue]).range([height, 0]);
+  const y = d3
+    .scaleLinear()
+    .domain([0, maxPValue])
+    .range(upsideDown ? [0, height] : [height, 0]);
+
+  // list of phenotypes
+
+  const phenotypes = d3
+    .groups(genes, (d) => d.phenotype)
+    .sort()
+    .map((d) => d[0]);
 
   /* ===
   HELPER FUNCTIONS
@@ -115,6 +133,29 @@ const ManhattanPlot: React.FC<Props> = ({
     return averages;
   }
 
+  function generateGreenHexCodes(amount: number): string[] {
+    const startColor = { r: 0, g: 128, b: 0 }; // Dark green
+    const endColor = { r: 144, g: 238, b: 144 }; // Light green
+
+    const hexCodes: string[] = [];
+
+    for (let i = 0; i < amount; i++) {
+      const ratio = i / (amount - 1);
+      const r = Math.round(startColor.r + ratio * (endColor.r - startColor.r));
+      const g = Math.round(startColor.g + ratio * (endColor.g - startColor.g));
+      const b = Math.round(startColor.b + ratio * (endColor.b - startColor.b));
+
+      const hexCode = `#${((1 << 24) + (r << 16) + (g << 8) + b)
+        .toString(16)
+        .slice(1)
+        .toUpperCase()}`;
+      hexCodes.push(hexCode);
+    }
+
+    return hexCodes;
+  }
+  const hexCodes = generateGreenHexCodes(phenotypes.length);
+
   /* ===
   CREATE GRAPH
   === */
@@ -125,12 +166,7 @@ const ManhattanPlot: React.FC<Props> = ({
       container.selectAll("svg").remove();
 
       // obtain options for filters
-      setPhenotypes(
-        d3
-          .groups(genes, (d) => d.phenotype)
-          .sort()
-          .map((d) => d[0])
-      );
+      setPhenotypes(phenotypes);
       setGrexes(
         d3
           .groups(genes, (d) => d.grex)
@@ -151,7 +187,7 @@ const ManhattanPlot: React.FC<Props> = ({
         .attr("transform", `translate(${margin.left},${margin.top})`);
       setSvg(svg);
     }
-  }, [d3Container.current]);
+  }, [d3Container.current, genes]);
 
   /* ===
   PLOT DATA POINTS AND DRAW AXES
@@ -160,6 +196,7 @@ const ManhattanPlot: React.FC<Props> = ({
   useEffect(() => {
     if (genes.length > 0 && d3Container.current && svg) {
       const container = d3.select(d3Container.current);
+      console.log("chungus");
 
       container.selectAll("line").remove();
       container.selectAll("text").remove();
@@ -213,24 +250,31 @@ const ManhattanPlot: React.FC<Props> = ({
           );
         })
         .attr("cy", (d) => y(-Math.log10(d.pValue)))
-        .attr("r", (d) => (d == highlighedGene ? 5 : 2))
+        .attr("r", (d) => (d == highlighedGene ? 5 : radius))
+        .attr("stroke", (d) =>
+          d == highlighedGene
+            ? hexCodes[phenotypes.indexOf(d.phenotype)]
+            : "none"
+        )
+        .attr("stroke-width", (d) => (d == highlighedGene ? "4" : "0"))
+        .attr("opacity", (d) => (d == highlighedGene ? "100%" : "60%"))
         .style("fill", (d) =>
           d == highlighedGene
-            ? "#C17985"
+            ? "transparent"
             : filter.correction === "bonferroni"
             ? d.pValue < filter.line / dataLength
-              ? "#E0B6BD"
+              ? hexCodes[phenotypes.indexOf(d.phenotype)]
               : Number(d.chromosome) % 2 === 1
               ? "#d1d5db"
               : "#9ca3af"
             : filter.correction === "FDR"
             ? d.pValue < fdrCutoff
-              ? "#E0B6BD"
+              ? hexCodes[phenotypes.indexOf(d.phenotype)]
               : Number(d.chromosome) % 2 === 1
               ? "#d1d5db"
               : "#9ca3af"
             : d.pValue < filter.line
-            ? "#E0B6BD"
+            ? hexCodes[phenotypes.indexOf(d.phenotype)]
             : Number(d.chromosome) % 2 === 1
             ? "#d1d5db"
             : "#9ca3af"
@@ -291,7 +335,13 @@ const ManhattanPlot: React.FC<Props> = ({
 
       // redraw axes
       // generate tick values based on chromosomes
-      const xTicks = d3
+
+      const xTicksTop = d3
+        .axisTop(x)
+        .tickValues(calculateTickPosition(cumulativeGeneCount))
+        .tickFormat((d, i) => chromosomes[i]);
+
+      const xTicksBottom = d3
         .axisBottom(x)
         .tickValues(calculateTickPosition(cumulativeGeneCount))
         .tickFormat((d, i) => chromosomes[i]);
@@ -299,11 +349,19 @@ const ManhattanPlot: React.FC<Props> = ({
       // style x-axis
       const xAxis = svg
         .append("g")
-        .attr("transform", `translate(0,${height})`)
-        .call(xTicks);
+        .attr("transform", upsideDown ? "" : `translate(0,${height})`)
+        .call(upsideDown ? xTicksTop : xTicksBottom);
       xAxis.selectAll("text").style("font-size", "14px");
       xAxis.selectAll("line").style("stroke-width", "2px");
       xAxis.selectAll("path").style("stroke-width", "2px");
+
+      if (upsideDown)
+        svg
+          .append("text")
+          .attr("text-anchor", "middle")
+          .attr("x", width / 2)
+          .attr("y", height + margin.top + 20)
+          .text("Chromosome");
 
       // Generate tick values in increments of 8 up to the maximum p-value
       let tickValues = d3.range(0, maxPValue, 8);
@@ -316,10 +374,22 @@ const ManhattanPlot: React.FC<Props> = ({
       yAxis.selectAll("line").style("stroke-width", "2px");
       yAxis.selectAll("path").style("stroke-width", "2px");
       yAxis.selectAll("text").style("font-size", "14px");
-    }
-  }, [d3Container.current, genes, filter, highlighedGene, lineY]);
 
-  return <div ref={d3Container}></div>;
+      svg
+        .append("text")
+        .attr("text-anchor", "middle")
+        .attr("transform", "rotate(-90)")
+        .attr("y", -margin.left + 20)
+        .attr("x", -height / 2)
+        .text("-log10(p)");
+    }
+  }, [d3Container.current, genes, filter, highlighedGene, lineY, upsideDown]);
+
+  return (
+    <div ref={d3Container} className="mx-auto">
+      {/* <svg width={width} height={height}></svg> */}
+    </div>
+  );
 };
 
 export default ManhattanPlot;

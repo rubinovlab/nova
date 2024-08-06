@@ -4,3 +4,8 @@ export interface Filter {
   grex: string[];
   correction: string;
 }
+
+export interface GrexVol {
+  grexes: number[];
+  volumes: number[];
+}

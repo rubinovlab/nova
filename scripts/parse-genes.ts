@@ -108,7 +108,7 @@ function combineData(
 
 async function main() {
   const txtFilePath = "data/gene_positions.bed";
-  const csvFilePath = "data/twas.csv";
+  const csvFilePath = "data/biovu_twas(in).csv";
 
   const genes = await parseBedFile(txtFilePath);
   const pValues = await parseCsvFile(csvFilePath);

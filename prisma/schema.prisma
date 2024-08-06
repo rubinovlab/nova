@@ -21,3 +21,38 @@ model Gene {
   pBonferroni   Float
   pFDR          Float
 }
+
+model Grex {
+  id     Int     @id @default(autoincrement())
+  geneId String
+  grex   String
+  grexes Float[]
+}
+
+model Volume {
+  id        Int     @id @default(autoincrement())
+  phenotype String
+  volumes   Float[]
+}
+
+model Gene2 {
+  id            Int    @id @default(autoincrement())
+  geneId        String
+  chromosome    String
+  startPosition Int
+  endPosition   Int
+  pValue        Float
+  beta          Float
+  geneSymbol    String
+  grex          String
+  phenotype     String
+  pBonferroni   Float
+  pFDR          Float
+}
+
+model Grex2 {
+  id     Int     @id @default(autoincrement())
+  geneId String
+  grex   String
+  grexes Float[]
+}

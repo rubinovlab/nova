@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/utils/prisma";
 
 export async function POST(req: NextRequest) {
   const { combinedData } = await req.json();
   try {
     const insertPromises = combinedData.map((gene: any) =>
-      prisma.gene.create({
+      prisma.gene2.create({
         data: {
           geneId: gene.geneId,
           chromosome: gene.chromosome,
@@ -18,8 +16,8 @@ export async function POST(req: NextRequest) {
           beta: gene.beta,
           geneSymbol: gene.geneSymbol,
           pValue: gene.pValue,
-          pBonferroni: gene.bonferroni,
-          pFDR: gene.FDR,
+          pBonferroni: -1,
+          pFDR: -1,
         },
       })
     );
