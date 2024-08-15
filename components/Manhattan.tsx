@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { Filter } from "@/utils/types";
 import { Gene } from "@prisma/client";
 
+// define types for props
 interface Props {
   genes: Gene[];
   filteredGenes: Gene[];
@@ -38,12 +39,12 @@ const ManhattanPlot: React.FC<Props> = ({
   radius,
   upsideDown,
 }) => {
+  // reference to graph
   const d3Container = useRef<HTMLDivElement | null>(null);
 
+  // store svg in state
   const [svg, setSvg] =
     useState<d3.Selection<SVGGElement, unknown, null, undefined>>();
-  const [prevFilter, setPrevFilter] = useState<number>(filter.line);
-  const [curFilter, setCurFilter] = useState<number>(filter.line);
 
   /* ===
   DEFINE AXES AND PROCESS DATA
@@ -133,6 +134,7 @@ const ManhattanPlot: React.FC<Props> = ({
     return averages;
   }
 
+  // generate gradient of colors for phenotypes
   function generateGreenHexCodes(amount: number): string[] {
     const startColor = { r: 0, g: 128, b: 0 }; // Dark green
     const endColor = { r: 144, g: 238, b: 144 }; // Light green
@@ -163,6 +165,8 @@ const ManhattanPlot: React.FC<Props> = ({
   useEffect(() => {
     if (genes.length > 0 && d3Container.current) {
       const container = d3.select(d3Container.current);
+
+      // delete current svg to rerender new graph if necessary
       container.selectAll("svg").remove();
 
       // obtain options for filters
@@ -174,9 +178,6 @@ const ManhattanPlot: React.FC<Props> = ({
           .map((d) => d[0])
       );
 
-      setLineY(y(-Math.log10(filter.line)));
-      setPrevLineY(y(-Math.log10(filter.line)));
-
       // draw graph
       const svg = d3
         .select(d3Container.current)
@@ -187,6 +188,8 @@ const ManhattanPlot: React.FC<Props> = ({
         .attr("transform", `translate(${margin.left},${margin.top})`);
       setSvg(svg);
     }
+
+    // rerender graph if reference or genes change
   }, [d3Container.current, genes]);
 
   /* ===
@@ -196,14 +199,13 @@ const ManhattanPlot: React.FC<Props> = ({
   useEffect(() => {
     if (genes.length > 0 && d3Container.current && svg) {
       const container = d3.select(d3Container.current);
-      console.log("chungus");
 
+      // redraw axes
       container.selectAll("line").remove();
       container.selectAll("text").remove();
       container.selectAll("path").remove();
 
       // draw data points
-
       const dataLength =
         filter.phenotype.length === 0 && filter.grex.length === 0
           ? genes.length
@@ -219,6 +221,7 @@ const ManhattanPlot: React.FC<Props> = ({
         }
       }
 
+      // optimization code commented becuase it doesn't work ://
       container
         .selectAll(".dot")
         // .filter(
@@ -240,6 +243,7 @@ const ManhattanPlot: React.FC<Props> = ({
         .attr("z-index", "-1")
         .attr("class", "dot")
         .attr("cx", (d) => {
+          // determine x coordinate
           const chromosomeIndex = Number(d.chromosome) - 1;
           return x(
             ((d.startPosition + d.endPosition) /
@@ -259,6 +263,7 @@ const ManhattanPlot: React.FC<Props> = ({
         .attr("stroke-width", (d) => (d == highlighedGene ? "4" : "0"))
         .attr("opacity", (d) => (d == highlighedGene ? "100%" : "60%"))
         .style("fill", (d) =>
+          // determine color of point
           d == highlighedGene
             ? "transparent"
             : filter.correction === "bonferroni"
@@ -281,7 +286,6 @@ const ManhattanPlot: React.FC<Props> = ({
         );
 
       // draw cut off line
-
       const cufOffHeight =
         filter.correction === "bonferroni"
           ? y(-Math.log10(filter.line / dataLength))

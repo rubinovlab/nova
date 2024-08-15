@@ -3,6 +3,7 @@ import { Gene } from "@prisma/client";
 import * as d3 from "d3";
 import { useEffect, useRef, useState } from "react";
 
+// define prop types
 interface Props {
   genes: Gene[];
   filteredGenes: Gene[];
@@ -17,6 +18,7 @@ interface Props {
   normalize: boolean;
 }
 
+// define heatmap data structure
 interface HeatmapData {
   xValue: string;
   yValue: string;
@@ -24,6 +26,7 @@ interface HeatmapData {
   jaccardIndex: number;
 }
 
+// define type for the highlighted rectangle in heatmap
 interface SelectedRect {
   xValue: string;
   yValue: string;
@@ -42,12 +45,16 @@ const Heatmap: React.FC<Props> = ({
 }) => {
   const d3Container2 = useRef<HTMLDivElement | null>(null);
 
+  // state for tooltip
+  // unused
   const [tooltipGenes, setTooltipGenes] = useState<HeatmapData>({
     xValue: "",
     yValue: "",
     genes: new Set(),
     jaccardIndex: 0,
   });
+
+  // state for highlighted rectangle in heatmap
   const [selectedRect, setSelectedRect] = useState<SelectedRect>({
     xValue: "",
     yValue: "",
@@ -69,7 +76,6 @@ const Heatmap: React.FC<Props> = ({
     margin.top;
 
   // filtering significant genes
-
   const dataLength =
     filter.phenotype.length === 0 && filter.grex.length === 0
       ? genes.length
@@ -116,10 +122,12 @@ const Heatmap: React.FC<Props> = ({
       : gene.pValue < filter2.line;
   };
 
+  // render graph
   useEffect(() => {
     if (d3Container2.current && phenotypes.length > 0) {
       d3.select(d3Container2.current).selectAll("svg").remove();
 
+      // obtain maps of phenotype to gene
       const genesByPhenotype = d3.groups(
         filter.grex.length !== 0 || filter.phenotype.length !== 0
           ? filteredGenes.filter((gene) => filterValue(gene))
@@ -134,7 +142,6 @@ const Heatmap: React.FC<Props> = ({
       );
 
       // find intersection of phenotypes
-
       const heatmapData: HeatmapData[] = [];
       for (let i = 0; i < genesByPhenotype.length; i++) {
         for (let j = 0; j < genesByPhenotype2.length; j++) {
@@ -170,6 +177,7 @@ const Heatmap: React.FC<Props> = ({
 
       const numGenes = heatmapData.map((data) => data.genes.size);
 
+      // define colors of heatmap
       var myColor = d3
         .scaleLinear<string>()
         .range(["white", "red"])
@@ -180,6 +188,7 @@ const Heatmap: React.FC<Props> = ({
         .range(["white", "red"])
         .domain([0, 1]);
 
+      // render graph
       const svg = d3
         .select(d3Container2.current)
         .append("svg")
@@ -188,6 +197,7 @@ const Heatmap: React.FC<Props> = ({
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
+      // define scales
       const x = d3
         .scaleBand()
         .range([0, width])
@@ -221,6 +231,7 @@ const Heatmap: React.FC<Props> = ({
 
       const yAxis = svg.append("g").call(d3.axisLeft(y));
 
+      // unused tooltip
       const tooltip = d3
         .select(d3Container2.current)
         .append("div")
@@ -232,6 +243,7 @@ const Heatmap: React.FC<Props> = ({
         .style("border-radius", "5px")
         .style("padding", "5px");
 
+      // render rectangles in heatmap
       const rects = svg
         .selectAll(".rect")
         .data(heatmapData)
@@ -286,20 +298,6 @@ const Heatmap: React.FC<Props> = ({
                 : 0;
             });
         });
-      // .on("mouseover", function (event, d: HeatmapData) {
-      //   d3.select(this).attr("stroke", "black").attr("stroke-width", 1);
-      // })
-      // .on("mouseleave", function (event, d: HeatmapData) {
-      //   d3.select(this)
-      //     .attr("stroke", "none")
-      //     .attr(
-      //       "stroke-width",
-      //       d.xValue === selectedRect.xValue &&
-      //         d.yValue === selectedRect.yValue
-      //         ? 1
-      //         : 0
-      //     );
-      // });
     }
   }, [
     d3Container2.current,

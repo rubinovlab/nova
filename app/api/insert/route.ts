@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
   const { combinedData } = await req.json();
   try {
     const insertPromises = combinedData.map((gene: any) =>
-      prisma.gene2.create({
+      prisma.gene.create({
         data: {
           geneId: gene.geneId,
           chromosome: gene.chromosome,

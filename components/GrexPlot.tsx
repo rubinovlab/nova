@@ -3,11 +3,13 @@ import { Gene } from "@prisma/client";
 import * as d3 from "d3";
 import { useEffect, useRef } from "react";
 
+// define prop types
 interface Props {
   highlighedGene: Gene | undefined;
   grexVolData: GrexVol;
 }
 
+// define data structure for graph to allow iteration
 interface GrexVolIterable {
   grex: number;
   volume: number;
@@ -28,6 +30,7 @@ const GrexPlot: React.FC<Props> = ({ highlighedGene, grexVolData }) => {
   const width = 250 - margin.left - margin.right;
   const height = 200 - margin.top - margin.bottom;
 
+  // define scales
   const x = d3
     .scaleLinear()
     .domain([d3.min(grexVolData.grexes) || 0, d3.max(grexVolData.grexes) || 0])
@@ -40,10 +43,13 @@ const GrexPlot: React.FC<Props> = ({ highlighedGene, grexVolData }) => {
     ])
     .range([height, 0]);
 
+  //render graph
   useEffect(() => {
     if (d3Container2.current) {
       d3.select(d3Container2.current).selectAll("svg").remove();
     }
+
+    // render graph
     const svg = d3
       .select(d3Container2.current)
       .append("svg")
@@ -52,6 +58,7 @@ const GrexPlot: React.FC<Props> = ({ highlighedGene, grexVolData }) => {
       .append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
 
+    // define axes
     const xAxis = svg
       .append("g")
       .attr("transform", `translate(0,${height})`)
@@ -59,6 +66,7 @@ const GrexPlot: React.FC<Props> = ({ highlighedGene, grexVolData }) => {
 
     const yAxis = svg.append("g").call(d3.axisLeft(y));
 
+    // draw data points
     svg
       .selectAll(".dot")
       .data(grexVolIterable)
@@ -93,6 +101,8 @@ const GrexPlot: React.FC<Props> = ({ highlighedGene, grexVolData }) => {
       grexVolIterable,
       (d) => (d.volume - (b0 + b1 * d.grex)) ** 2
     );
+
+    // r^2 would be stored here below
     // setR2(1 - sse / sst);
   }, [d3Container2.current, highlighedGene, grexVolData]);
 

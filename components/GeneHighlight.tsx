@@ -2,6 +2,7 @@ import { Filter, GrexVol } from "@/utils/types";
 import { Gene } from "@prisma/client";
 import GrexPlot from "./GrexPlot";
 
+// define props
 interface Props {
   highlighedGene: Gene | undefined;
   grexVolData: GrexVol;

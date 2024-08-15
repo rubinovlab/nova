@@ -14,12 +14,15 @@ const DoubleManhattan: React.FC<Props> = ({ genes, genes2 }) => {
   const width = 500 - margin.left - margin.right;
   const height = 500 - margin.top - margin.bottom;
 
+  // function to generate key to compare genes
   const generateKey = (gene: Gene) =>
     `${gene.geneId}_${gene.phenotype}_${gene.grex}`;
 
+  // find overlapping genes
   const geneMap = new Map(genes.map((gene) => [generateKey(gene), gene]));
   const geneMap2 = new Map(genes2.map((gene) => [generateKey(gene), gene]));
 
+  // overlap first set of genes with second set
   const combinedGeneData1 = genes2.map((gene) => {
     const key = generateKey(gene);
     const foundGene = geneMap.get(key);
@@ -42,6 +45,7 @@ const DoubleManhattan: React.FC<Props> = ({ genes, genes2 }) => {
     }
   });
 
+  // overlap second set of genes with first
   const combinedGeneData2 = genes.map((gene) => {
     const key = generateKey(gene);
     const foundGene = geneMap2.get(key);
@@ -64,6 +68,7 @@ const DoubleManhattan: React.FC<Props> = ({ genes, genes2 }) => {
     }
   });
 
+  // combine the genes!
   const combinedGeneData = d3.union(combinedGeneData1, combinedGeneData2);
 
   // transformed p-values
@@ -94,11 +99,13 @@ const DoubleManhattan: React.FC<Props> = ({ genes, genes2 }) => {
         .append("g")
         .attr("transform", `translate(${margin.left},${margin.top})`);
 
+      // draw axes
       const xAxis = svg
         .append("g")
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(x));
 
+      // make axes thicker
       xAxis.selectAll("text").style("font-size", "14px");
       xAxis.selectAll("line").style("stroke-width", "2px");
       xAxis.selectAll("path").style("stroke-width", "2px");
@@ -109,6 +116,7 @@ const DoubleManhattan: React.FC<Props> = ({ genes, genes2 }) => {
       yAxis.selectAll("line").style("stroke-width", "2px");
       yAxis.selectAll("path").style("stroke-width", "2px");
 
+      // draw data
       svg
         .selectAll(".dot")
         .data(combinedGeneData)

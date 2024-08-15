@@ -4,7 +4,6 @@ import { prisma } from "@/utils/prisma";
 export async function POST(req: NextRequest) {
   const { volumes } = await req.json();
 
-  console.log(volumes);
   try {
     const insertPromises = volumes.map((volume: any) =>
       prisma.volume.create({

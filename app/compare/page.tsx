@@ -13,29 +13,50 @@ import Heatmap from "@/components/Heatmap";
 import DoubleManhattan from "@/components/DoubleManhattan";
 
 export default function Home() {
+  // state for compact view
   const [compact, setCompact] = useState<boolean>(false);
+
+  // check if data has been imported to extend view
   const [dataImported1, setDataImported1] = useState<boolean>(false);
   const [dataImported2, setDataImported2] = useState<boolean>(false);
 
+  // first set of genes
   const [genes, setGenes] = useState<Gene[]>([]);
+
+  // first filter
   const [filter, setFilter] = useState<Filter>({
     line: 0.05,
     phenotype: [],
     grex: [],
     correction: "FDR",
   });
+
+  // state for filtered genes based on filter
   const [filteredGenes, setFilteredGenes] = useState<Gene[]>([]);
+
+  //list of phenotypes
   const [phenotypes, setPhenotypes] = useState<string[]>([]);
+
+  // list of grexes
   const [grexes, setGrexes] = useState<string[]>([]);
+
+  // track highlighted gene
   const [highlightedGene, setHighlightedGene] = useState<Gene>();
+
+  // height of line, unused
   const [lineY, setLineY] = useState<number>(0);
+
+  //unused
   const [prevLineY, setPrevLineY] = useState<number>(0);
+
+  // data for grexvol scatter plot
   const [grexVolData, setGrexVolData] = useState<GrexVol>({
     grexes: [],
     volumes: [],
   });
   const [r2, setR2] = useState<number>(0);
 
+  // second set of genes and corresponding data
   const [genes2, setGenes2] = useState<Gene[]>([]);
   const [filter2, setFilter2] = useState<Filter>({
     line: 0.05,
@@ -67,6 +88,7 @@ export default function Home() {
     }
   };
 
+  // find data for grexvol plot based on highlighted gene
   const fetchHighlightedGeneData = async () => {
     if (highlightedGene) {
       const response = await axios.post(`/api/grex-vol`, {
@@ -92,10 +114,12 @@ export default function Home() {
     }
   };
 
+  // fetch data on page render
   useEffect(() => {
     fetchData();
   }, []);
 
+  // update highlighted gene data when changed
   useEffect(() => {
     fetchHighlightedGeneData();
   }, [highlightedGene, highlightedGene2]);

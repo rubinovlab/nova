@@ -2,6 +2,7 @@ import { Filter } from "@/utils/types";
 import { Gene } from "@prisma/client";
 import { FormEventHandler, useState } from "react";
 
+// define prop types
 interface Props {
   filter: Filter;
   setFilter: React.Dispatch<React.SetStateAction<Filter>>;
@@ -26,6 +27,7 @@ const Inputs: React.FC<Props> = ({
     grex: [],
   });
 
+  // function to update pvalue and correction method stored in temporary state
   const handleInputChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -37,6 +39,7 @@ const Inputs: React.FC<Props> = ({
     });
   };
 
+  // update inputs when user clicks "Update"
   const updateInputs = () => {
     setFilter(filterTemp);
 
@@ -57,6 +60,7 @@ const Inputs: React.FC<Props> = ({
     setFilteredGenes(filteredGenes);
   };
 
+  // update temporary filter state for phenotypes of grex selection
   const handleFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const { name, options } = event.target;
     const selectedValues = Array.from(options)
@@ -69,10 +73,12 @@ const Inputs: React.FC<Props> = ({
     });
   };
 
+  // prevent page refresh
   const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
   };
 
+  // generate gradient of colors for phenotypes
   function generateGreenHexCodes(amount: number): string[] {
     const startColor = { r: 0, g: 128, b: 0 }; // Dark green
     const endColor = { r: 144, g: 238, b: 144 }; // Light green

@@ -16,6 +16,7 @@ const Genes: React.FC<Props> = ({
   highlightedGene,
   setHighlightedGene,
 }) => {
+  // obtain p values from genes
   const dataLength =
     filter.phenotype.length === 0 && filter.grex.length === 0
       ? genes.length
@@ -31,6 +32,7 @@ const Genes: React.FC<Props> = ({
     }
   }
 
+  // function to round scientific notation
   function roundToScientificNotation(
     value: number,
     decimalPlaces: number
@@ -45,6 +47,7 @@ const Genes: React.FC<Props> = ({
     return `${mantissa}e${exponent}`;
   }
 
+  // function to correct pvalue
   const filterValue = (gene: Gene) => {
     return filter.correction === "bonferroni"
       ? gene.pValue < filter.line / dataLength

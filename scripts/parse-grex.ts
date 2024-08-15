@@ -4,6 +4,9 @@ const fs = require("fs");
 const csv = require("csv-parser");
 const axios = require("axios");
 
+// import errors and main function defined already errors are okay
+
+// define grex type
 interface Grex {
   geneId: string;
   grexes: number[];
@@ -43,11 +46,13 @@ const volumesCerebellarHemisphere: number[] = [];
 const volumesAnteriorCingulate: number[] = [];
 const volumesDlpfc: number[] = [];
 
+// obtain volumes from csv file
 function parseCsv() {
   return new Promise<void>((resolve, reject) => {
     fs.createReadStream(path.resolve("data/vol_mean.csv"))
       .pipe(csv())
       .on("data", (data: any) => {
+        // data is stored in one long string so data is separated by whitespace
         const key = Object.keys(data)[0];
         const valuesAsString = data[key];
         const values = valuesAsString.split(/\s+/);
@@ -66,10 +71,12 @@ function parseCsv() {
   });
 }
 
+// run python script function, must run separately for each file
 function parseHdf5(filePath: string, phenotype: string) {
   return new Promise<void>((resolve, reject) => {
     const pythonProcess = spawn("myenv/bin/python3", [
       "scripts/parse_hdf5.py",
+      // update file path each time to process all data
       filePath,
     ]);
 
@@ -91,6 +98,8 @@ function parseHdf5(filePath: string, phenotype: string) {
         reject(new Error(`Python script exited with code ${code}`));
         return;
       }
+
+      // store data in grexes
       try {
         const data = JSON.parse(stdoutData);
         for (let i = 0; i < data.expression_matrix.length; i++) {
@@ -111,7 +120,10 @@ function parseHdf5(filePath: string, phenotype: string) {
 
 async function main() {
   try {
+    // upload volumes data to database
     await parseCsv();
+
+    // create data that contains phenotype and its corresponding list of volumes
     const volumes = [
       { phenotype: "amygdala", data: volumesAmygdala.slice(0, 2000) },
       {
@@ -144,9 +156,14 @@ async function main() {
       volumes,
     });
 
-    // grex data
+    // PROCESS GREX DATA
+
+    // // choose which file to process
+    // // make sure the numbers are the same, e.g. (filePaths[0], phenotypes[0]), (filePaths[1], phenotypes[1]), etc.
     // await parseHdf5(filePaths[7], phenotypes[7]);
     // const batchSize = 500;
+
+    // // batching to stop my laptop from crashing
     // for (let i = 0; i < grexes.length; i += batchSize) {
     //   const batch = grexes.slice(i, i + batchSize);
     //   const response = await axios.post("http://localhost:3000/api/grexes", {
