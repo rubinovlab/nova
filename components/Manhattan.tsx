@@ -163,6 +163,7 @@ const ManhattanPlot: React.FC<Props> = ({
   === */
 
   useEffect(() => {
+    console.log(genes);
     if (genes.length > 0 && d3Container.current) {
       const container = d3.select(d3Container.current);
 
