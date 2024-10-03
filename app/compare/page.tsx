@@ -1,16 +1,22 @@
 "use client";
 
 import ManhattanPlot from "@/components/Manhattan";
+import * as d3 from "d3";
 import { useEffect, useState } from "react";
 import { Filter, GrexVol } from "@/utils/types";
 import axios from "axios";
 import Inputs from "@/components/Inputs";
 import Genes from "@/components/Genes";
-import { Gene } from "@prisma/client";
+import { Gene, GenePosition } from "@prisma/client";
 import GeneHighlight from "@/components/GeneHighlight";
 import GrexPlot from "@/components/GrexPlot";
 import Heatmap from "@/components/Heatmap";
 import DoubleManhattan from "@/components/DoubleManhattan";
+import { match } from "assert";
+
+interface CsvRow {
+  [key: string]: string | number; // Allow both string and number
+}
 
 export default function Home() {
   // state for compact view
@@ -76,15 +82,30 @@ export default function Home() {
   });
   const [r22, setR22] = useState<number>(0);
 
+  const [csvData, setCsvData] = useState<Gene[] | null>(null);
+  const [genePositions, setGenePositions] = useState<GenePosition[] | null>(
+    null
+  );
+  const [loading, setLoading] = useState<boolean>(false); // New loading state
+
   // fetch existing data from database
-  const fetchData = async () => {
+  // const fetchData = async () => {
+  //   try {
+  //     const response = await axios.get("/api/fetch");
+  //     setGenes(response.data.data.filter((gene: Gene) => gene.chromosome));
+  //     const response2 = await axios.get("/api/fetch2");
+  //     setGenes2(response2.data.data.filter((gene: Gene) => gene.chromosome));
+  //   } catch (error) {
+  //     console.error("Error fetching data: ", error);
+  //   }
+  // };
+
+  const fetchGenePositions = async () => {
     try {
-      const response = await axios.get("/api/fetch");
-      setGenes(response.data.data.filter((gene: Gene) => gene.chromosome));
-      const response2 = await axios.get("/api/fetch2");
-      setGenes2(response2.data.data.filter((gene: Gene) => gene.chromosome));
+      const response = await axios.get("/api/fetch-positions");
+      setGenePositions(response.data);
     } catch (error) {
-      console.error("Error fetching data: ", error);
+      console.error("Error fetching gene positions: ", error);
     }
   };
 
@@ -114,9 +135,60 @@ export default function Home() {
     }
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLoading(true); // Start loading
+      const reader = new FileReader();
+      reader.onload = function (e: ProgressEvent<FileReader>) {
+        const text = e.target?.result as string;
+        parseCsvData(text);
+        setLoading(false); // Stop loading after processing
+        !dataImported1 ? setDataImported1(true) : setDataImported2(true); // Mark data as imported
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const parseCsvData = (csvString: string) => {
+    const parsedData: CsvRow[] = d3.csvParse(csvString);
+
+    // Filter and map to exclude rows with no matching gene positions
+    const matchedGenes = parsedData
+      .map((csvRow, index) => {
+        const matchedGene = genePositions?.find(
+          (gene) => gene.geneID == csvRow.ens
+        ); // match by geneID
+
+        if (!matchedGene) {
+          console.log(`No match found for geneID: ${csvRow.gene_id}`);
+          return null; // Return null if no match is found
+        }
+
+        return {
+          id: index, // Add a unique ID
+          geneId: csvRow.ens as string, // Assuming "ens" is the gene ID in your CSV
+          chromosome: matchedGene.chromosome || "N/A",
+          startPosition: Number(matchedGene.start || 0), // Convert startPosition to a number
+          endPosition: Number(matchedGene.end || 0), // Convert endPosition to a number
+          pValue: Number(csvRow.pval || 0), // Assuming p_value comes from CSV
+          beta: Number(csvRow.beta || 0), // Assuming beta comes from CSV
+          geneSymbol: String(csvRow.sym) || "Unknown", // Assuming gene_symbol is in CSV
+          grex: String(csvRow.grex) || "Unknown", // Assuming grex is in CSV
+          phenotype: String(csvRow.phen) || "Unknown", // Assuming phenotype is in CSV
+          pBonferroni: Number(csvRow.BON || 0), // Assuming p_bonferroni comes from CSV
+          pFDR: Number(csvRow.FDR || 0), // Assuming p_fdr comes from CSV
+        };
+      })
+      .filter((geneData) => geneData !== null); // Filter out any null values
+
+    !dataImported1 ? setGenes(matchedGenes) : setGenes2(matchedGenes);
+  };
+
   // fetch data on page render
   useEffect(() => {
-    fetchData();
+    // fetchData();
+    fetchGenePositions();
   }, []);
 
   // update highlighted gene data when changed
@@ -147,12 +219,21 @@ export default function Home() {
 
       <div className="justify-center flex">
         {!dataImported1 ? (
-          <p
-            className="px-6 py-3 border border-black text-xl rounded-2xl cursor-pointer hover:text-gray-500 hover:border-gray-500"
-            onClick={() => setDataImported1(true)}
-          >
-            + Import Data
-          </p>
+          <>
+            {!loading ? (
+              <label className="px-6 py-3 border border-black text-xl rounded-2xl cursor-pointer hover:text-gray-500 hover:border-gray-500">
+                + Import Data
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <p className="px-6 py-3 text-xl">Loading...</p>
+            )}
+          </>
         ) : (
           ""
         )}
@@ -210,12 +291,21 @@ export default function Home() {
 
           <div className="justify-center flex">
             {!dataImported2 ? (
-              <p
-                className="px-6 py-3 border border-black text-xl rounded-full cursor-pointer hover:text-gray-500 hover:border-gray-500"
-                onClick={() => setDataImported2(true)}
-              >
-                + Import Second Dataset
-              </p>
+              <>
+                {!loading ? (
+                  <label className="px-6 py-3 border border-black text-xl rounded-2xl cursor-pointer hover:text-gray-500 hover:border-gray-500">
+                    + Import Data 2
+                    <input
+                      type="file"
+                      accept=".csv"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <p className="px-6 py-3 text-xl">Loading...</p>
+                )}
+              </>
             ) : (
               ""
             )}
