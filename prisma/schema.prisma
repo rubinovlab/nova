@@ -56,3 +56,11 @@ model Grex2 {
   grex   String
   grexes Float[]
 }
+
+model GenePosition {
+  id         Int    @id @default(autoincrement())
+  chromosome String
+  start      Int
+  end        Int
+  geneID     String
+}
