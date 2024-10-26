@@ -14,10 +14,6 @@ export default function Navbar() {
         <Link href="/compare" className="hover:text-gray-500 transition">
           Analyze
         </Link>
-        <Link href="/how-to" className="hover:text-gray-500 transition">
-          How To
-        </Link>
-        <p>MAROON</p>
       </div>
     </nav>
   );

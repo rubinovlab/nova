@@ -13,11 +13,10 @@ export default function Home() {
       </p>
       <p className="text-xl font-light mx-20">
         Neuro Omics Visual Analytics (NOVA) is a tool that visualizes GWAS and
-        TWAS data with various graphs and filters. Learn how to upload your
-        data, control filters, and gain insights{" "}
+        TWAS data with various graphs and filters. Start analyzing{" "}
         <span
           className="underline hover:text-gray-500 transition cursor-pointer"
-          onClick={() => router.push("/how-to")}
+          onClick={() => router.push("/compare")}
         >
           here
         </span>
