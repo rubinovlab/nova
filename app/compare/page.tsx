@@ -100,6 +100,7 @@ export default function Home() {
   //   }
   // };
 
+  // get gene positions from database to verify if gene exists
   const fetchGenePositions = async () => {
     try {
       const response = await axios.get("/api/fetch-positions");
@@ -135,6 +136,7 @@ export default function Home() {
     }
   };
 
+  // handle file upload for both datasets
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -150,6 +152,7 @@ export default function Home() {
     }
   };
 
+  // parse the csv data of file uploaded
   const parseCsvData = (csvString: string) => {
     const parsedData: CsvRow[] = d3.csvParse(csvString);
 
@@ -165,6 +168,7 @@ export default function Home() {
           return null; // Return null if no match is found
         }
 
+        // change csv headings as necessary
         return {
           id: index, // Add a unique ID
           geneId: csvRow.ens as string, // Assuming "ens" is the gene ID in your CSV
